@@ -11,7 +11,6 @@ func main() {
 	var headerPath, footerPath, pdfPath string
 	var bodyPaths []string
 	mwkhtmltopdfURL := getEnvOrDefault("MWKHTMLTOPDF_URL", "http://localhost:2777")
-	fileArgReached := false
 	wkArgs := ""
 
 	if os.Args[1] == "--version" {
@@ -24,41 +23,50 @@ func main() {
 		os.Exit(0)
 	}
 
-	for i := 1; i < len(os.Args); i++ {
-		if fileArgReached {
-			bodyPaths = append(bodyPaths, os.Args[i])
-			continue
-		}
+	pdfPath = os.Args[len(os.Args) - 1]
+	i := len(os.Args) - 2
 
+	for os.Args[i][:11] == "report.body" {
+		bodyPaths = append([]string{os.Args[i]}, bodyPaths...)
+		i--
+	}
+
+	for i >= 1 {
 		if os.Args[i] == "--header-html" {
 			headerPath = os.Args[i+1]
-			i++
+			i--
 			continue
 		}
 		
 		if os.Args[i] == "--footer-html" {
-			fileArgReached = true
 			footerPath = os.Args[i+1]
-			i++
+			i--
 			continue
 		}
 
-		wkArgs += " " + os.Args[i]
+		if len(os.Args[i]) >= 5 && os.Args[i][len(os.Args[i])-5:] == ".html" {
+			i--
+			continue
+		}
+
+		wkArgs = os.Args[i] + " " + wkArgs
+		i--
 	}
 
-	pdfPath = bodyPaths[len(bodyPaths)-1]
-	bodyPaths = bodyPaths[:len(bodyPaths)-1]
-	curlCmd := fmt.Sprintf("curl -X POST %s/generate -H 'Content-Type: multipart/form-data'", mwkhtmltopdfURL)
-
-	curlCmd += fmt.Sprintf(" -F 'args=%s'", wkArgs)
-	curlCmd += fmt.Sprintf(" -F 'header_html=@%s'", headerPath)
-	curlCmd += fmt.Sprintf(" -F 'footer_html=@%s'", footerPath)
+	curlCmd := fmt.Sprintf("curl -X POST %s/generate -H 'Content-Type: multipart/form-data' -F 'args=%s'", mwkhtmltopdfURL, wkArgs)
+	if headerPath != "" {
+		curlCmd += fmt.Sprintf(" -F 'header_html=@%s'", headerPath)
+	}
+	if footerPath != "" {
+		curlCmd += fmt.Sprintf(" -F 'footer_html=@%s'", footerPath)
+	}
 
 	for i, bodyPath := range bodyPaths {
 		curlCmd += fmt.Sprintf(" -F 'body_html_%s=@%s'", strconv.Itoa(i), bodyPath)
 	}
 
 	curlCmd += fmt.Sprintf(" -o %s", pdfPath)
+	fmt.Println(curlCmd)
 	curlExec := exec.Command("sh", "-c", curlCmd)
 	err := curlExec.Run()
 	if err != nil {
