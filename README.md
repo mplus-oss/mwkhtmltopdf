@@ -19,6 +19,15 @@ The advantages are:
 
 1. `MWKHTMLTOPDF_URL`: Base URL of the Mwkhtmltopdf server, if you're using [odooctl](https://github.com/mplus-oss/odoo) deployment stack this value is set to "http://mwkhtmltopdf-server"
 
+
+## Installation
+
+Include this line in your Dockerfile:
+
+```Dockerfile
+COPY --from=ghcr.io/mplus-oss/mwkhtmltopdf-client /usr/local/bin/wkhtmltopdf /usr/local/bin/wkhtmltopdf
+```
+
 ## Security
 
 Do not ever expose the server! There's no authentication system which makes the server should be forever run in a private network, otherwise it can lead to complete takeover of the OS/container it is running!
