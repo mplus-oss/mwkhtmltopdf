@@ -42,7 +42,7 @@ func main() {
 
 		dir, err := os.MkdirTemp("", "pdfgen")
 		if err != nil {
-			return c.String(http.StatusInternalServerError, err.Error())
+			return c.String(http.StatusInternalServerError, "Failed to create temp dir")
 		}
 		
 		defer os.RemoveAll(dir)
@@ -50,17 +50,17 @@ func main() {
 		if headerEnabled {
 			headerFile, err := headerFileMultiPart.Open()
 			if err != nil {
-				return c.String(http.StatusInternalServerError, err.Error())
+				return c.String(http.StatusInternalServerError, "Failed to open header file")
 			}
 			defer headerFile.Close()
 			headerFilePath := fmt.Sprintf("%s/%s", dir, headerFileMultiPart.Filename)
 			headerFileOutput, err := os.Create(headerFilePath)
 			if err != nil {
-				return c.String(http.StatusInternalServerError, err.Error())
+				return c.String(http.StatusInternalServerError, "Failed to create header file")
 			}
 			defer headerFileOutput.Close()
 			if _, err := io.Copy(headerFileOutput, headerFile); err != nil {
-				return c.String(http.StatusInternalServerError, err.Error())
+				return c.String(http.StatusInternalServerError, "Failed to copy header file")
 			}
 			headerArgs = fmt.Sprintf("--header-html %s", headerFilePath)
 		}
@@ -68,24 +68,24 @@ func main() {
 		if footerEnabled {
 			footerFile, err := footerFileMultiPart.Open()
 			if err != nil {
-				return c.String(http.StatusInternalServerError, err.Error())
+				return c.String(http.StatusInternalServerError, "Failed to open footer file")
 			}
 			defer footerFile.Close()
 			footerFilePath := fmt.Sprintf("%s/%s", dir, footerFileMultiPart.Filename)
 			footerFileOutput, err := os.Create(footerFilePath)
 			if err != nil {
-				return c.String(http.StatusInternalServerError, err.Error())
+				return c.String(http.StatusInternalServerError, "Failed to create footer file")
 			}
 			defer footerFileOutput.Close()
 			if _, err := io.Copy(footerFileOutput, footerFile); err != nil {
-				return c.String(http.StatusInternalServerError, err.Error())
+				return c.String(http.StatusInternalServerError, "Failed to copy footer file")
 			}
 			footerArgs = fmt.Sprintf("--footer-html %s", footerFilePath)
 		}
 
 		bodyFilesList, err := c.MultipartForm()
 		if err != nil {
-			return c.String(http.StatusInternalServerError, err.Error())
+			return c.String(http.StatusInternalServerError, "Failed to get body files list")
 		}
 		
 		bodyFileArgs := []string{}
@@ -94,21 +94,21 @@ func main() {
 			if key[:9] == "body_html" {
 				bodyFileMultiPart, err := c.FormFile(key)
 				if err != nil {
-					return c.String(http.StatusInternalServerError, err.Error())
+					return c.String(http.StatusInternalServerError, "Failed to get body file")
 				}
 				bodyFile, err := bodyFileMultiPart.Open()
 				if err != nil {
-					return c.String(http.StatusInternalServerError, err.Error())
+					return c.String(http.StatusInternalServerError, "Failed to open body file")
 				}
 				defer bodyFile.Close()
 				bodyFilePath := fmt.Sprintf("%s/%s", dir, bodyFileMultiPart.Filename)
 				bodyFileOutput, err := os.Create(bodyFilePath)
 				if err != nil {
-					return c.String(http.StatusInternalServerError, err.Error())
+					return c.String(http.StatusInternalServerError, "Failed to create body file")
 				}
 				defer bodyFileOutput.Close()
 				if _, err := io.Copy(bodyFileOutput, bodyFile); err != nil {
-					return c.String(http.StatusInternalServerError, err.Error())
+					return c.String(http.StatusInternalServerError, "Failed to copy body file")
 				}
 				bodyFileArgs = append(bodyFileArgs, bodyFilePath)
 			}
@@ -119,15 +119,14 @@ func main() {
 		pdfPath := fmt.Sprintf("%s/output.pdf", dir)
 		pdfCmd := fmt.Sprintf("wkhtmltopdf %s %s %s %s %s", wkArgs, headerArgs, footerArgs, bodyFileArgsStr, pdfPath)
 		log.Println(fmt.Sprintf("Running command: %s", pdfCmd))
-		cmd := exec.Command("sh", "-c", pdfCmd)
-		err = cmd.Run()
+		out, err := exec.Command("sh", "-c", pdfCmd).CombinedOutput()
 		if err != nil {
-			return c.String(http.StatusInternalServerError, err.Error())
+			return c.String(http.StatusInternalServerError, fmt.Sprintf("Failed to generate PDF: %s", string(out)))
 		}
 
 		pdfFile, err := os.Open(pdfPath)
 		if err != nil {
-			return c.String(http.StatusInternalServerError, err.Error())
+			return c.String(http.StatusInternalServerError, "Failed to open PDF file")
 		}
 		defer pdfFile.Close()
 
