@@ -13,6 +13,7 @@ func main() {
 	var bodyPaths []string
 	mwkhtmltopdfURL := getEnvOrDefault("MWKHTMLTOPDF_URL", "http://localhost:2777")
 	wkArgs := ""
+	debug := getEnvOrDefault("MWKHTMLTOPDF_DEBUG", "false")
 
 	if os.Args[1] == "--version" {
 		curlCmd := fmt.Sprintf("curl %s", mwkhtmltopdfURL)
@@ -68,6 +69,11 @@ func main() {
 
 	curlCmd += fmt.Sprintf(" -o %s", pdfPath)
 	curlExec := exec.Command("sh", "-c", curlCmd)
+
+	if debug == "true" {
+		fmt.Println(curlCmd)
+	}
+	
 	err := curlExec.Run()
 	if err != nil {
 		panic(err)
