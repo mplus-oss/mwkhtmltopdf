@@ -17,7 +17,7 @@ The advantages are:
 
 ### Client
 
-1. `MWKHTMLTOPDF_URL`: Base URL of the Mwkhtmltopdf server, if you're using [odooctl](https://github.com/mplus-oss/odoo) deployment stack this value is set to "http://mwkhtmltopdf-server"
+1. `MWKHTMLTOPDF_URL`: Base URL of the Mwkhtmltopdf server, if you're using [odooctl](https://github.com/mplus-oss/odoo) deployment stack this value is set to "http://mwkhtmltopdf-server:2777"
 
 
 ## Installation
