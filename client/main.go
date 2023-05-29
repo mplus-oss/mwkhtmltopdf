@@ -67,7 +67,6 @@ func main() {
 	}
 
 	curlCmd += fmt.Sprintf(" -o %s", pdfPath)
-	fmt.Println(curlCmd)
 	curlExec := exec.Command("sh", "-c", curlCmd)
 	err := curlExec.Run()
 	if err != nil {
