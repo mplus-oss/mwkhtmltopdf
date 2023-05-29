@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"path"
 )
 
 func main() {
@@ -26,7 +27,7 @@ func main() {
 	pdfPath = os.Args[len(os.Args) - 1]
 	i := len(os.Args) - 2
 
-	for os.Args[i][:11] == "report.body" {
+	for path.Base(os.Args[i][:11]) == "report.body" {
 		bodyPaths = append([]string{os.Args[i]}, bodyPaths...)
 		i--
 	}
