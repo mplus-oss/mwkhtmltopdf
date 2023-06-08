@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"path"
 )
 
@@ -21,7 +22,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println(string(curlExec))
+		fmt.Println(strings.Trim(string(curlExec), "\n"))
 		os.Exit(0)
 	}
 
