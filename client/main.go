@@ -72,7 +72,7 @@ func main() {
 	curlExec := exec.Command("sh", "-c", curlCmd)
 
 	if debug == "true" {
-		fmt.Println(curlCmd)
+		fmt.Fprintln(os.Stderr, curlCmd)
 	}
 	
 	err := curlExec.Run()
