@@ -89,29 +89,34 @@ func main() {
 		}
 		
 		bodyFileArgs := []string{}
+		bodyFileCount := 0
 
 		for key, _ := range bodyFilesList.File {
 			if key[:9] == "body_html" {
-				bodyFileMultiPart, err := c.FormFile(key)
-				if err != nil {
-					return c.String(http.StatusInternalServerError, "Failed to get body file")
-				}
-				bodyFile, err := bodyFileMultiPart.Open()
-				if err != nil {
-					return c.String(http.StatusInternalServerError, "Failed to open body file")
-				}
-				defer bodyFile.Close()
-				bodyFilePath := fmt.Sprintf("%s/%s", dir, bodyFileMultiPart.Filename)
-				bodyFileOutput, err := os.Create(bodyFilePath)
-				if err != nil {
-					return c.String(http.StatusInternalServerError, "Failed to create body file")
-				}
-				defer bodyFileOutput.Close()
-				if _, err := io.Copy(bodyFileOutput, bodyFile); err != nil {
-					return c.String(http.StatusInternalServerError, "Failed to copy body file")
-				}
-				bodyFileArgs = append(bodyFileArgs, bodyFilePath)
+				bodyFileCount++
 			}
+		}
+
+		for i := 0; i < bodyFileCount; i++ {
+			bodyFileMultiPart, err := c.FormFile(fmt.Sprintf("body_html_%d", i))
+			if err != nil {
+				return c.String(http.StatusInternalServerError, "Failed to get body file")
+			}
+			bodyFile, err := bodyFileMultiPart.Open()
+			if err != nil {
+				return c.String(http.StatusInternalServerError, "Failed to open body file")
+			}
+			defer bodyFile.Close()
+			bodyFilePath := fmt.Sprintf("%s/%s", dir, bodyFileMultiPart.Filename)
+			bodyFileOutput, err := os.Create(bodyFilePath)
+			if err != nil {
+				return c.String(http.StatusInternalServerError, "Failed to create body file")
+			}
+			defer bodyFileOutput.Close()
+			if _, err := io.Copy(bodyFileOutput, bodyFile); err != nil {
+				return c.String(http.StatusInternalServerError, "Failed to copy body file")
+			}
+			bodyFileArgs = append(bodyFileArgs, bodyFilePath)
 		}
 
 		bodyFileArgsStr := strings.Join(bodyFileArgs, " ")
