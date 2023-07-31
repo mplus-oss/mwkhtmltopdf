@@ -11,6 +11,8 @@ ADD https://github.com/wkhtmltopdf/packaging/releases/download/${WKHTMLTOPDF_VER
 RUN set -ex; \
     apt update; \
     apt install --no-install-recommends -y /tmp/wkhtmltox.deb; \
+    useradd -m wkhtmltopdf; \
     rm -f /tmp/wkhtmltox.deb
 EXPOSE 2777
+USER wkhtmltopdf
 ENTRYPOINT ["/usr/local/bin/wkhtmltopdf-server"]
