@@ -17,12 +17,7 @@ func main() {
 	debug := getEnvOrDefault("MWKHTMLTOPDF_DEBUG", "false")
 
 	if os.Args[1] == "--version" {
-		curlCmd := fmt.Sprintf("curl %s", mwkhtmltopdfURL)
-		curlExec, err := exec.Command("sh", "-c", curlCmd).Output()
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println(strings.Trim(string(curlExec), "\n"))
+		fmt.Println("wkhtmltopdf 0.12.6.1 (with patched qt)")
 		os.Exit(0)
 	}
 
