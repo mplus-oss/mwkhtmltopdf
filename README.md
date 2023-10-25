@@ -25,7 +25,7 @@ The advantages are:
 Include this line in your Dockerfile:
 
 ```Dockerfile
-COPY --from=ghcr.io/mplus-oss/mwkhtmltopdf-client /usr/local/bin/wkhtmltopdf /usr/local/bin/wkhtmltopdf
+COPY --from=registry.mitija.com/library/mwkhtmltopdf-client /usr/local/bin/wkhtmltopdf /usr/local/bin/wkhtmltopdf
 ```
 
 ## Security
