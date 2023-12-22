@@ -12,8 +12,11 @@ import (
 )
 
 func main() {
+	wkAdditionalArgs := os.Getenv("WKHTMLTOPDF_ADDITIONAL_ARGS")
+
 	e := echo.New()
 	e.HideBanner = true
+
 	e.GET("/", func(c echo.Context) error {
 		cmd := exec.Command("sh", "-c", "wkhtmltopdf --version")
 		out, err := cmd.Output()
@@ -22,6 +25,7 @@ func main() {
 		}
 		return c.String(http.StatusOK, string(out))
 	})
+
 	e.POST("/generate", func(c echo.Context) error {
 		headerEnabled := true
 		headerArgs := ""
@@ -122,7 +126,7 @@ func main() {
 		bodyFileArgsStr := strings.Join(bodyFileArgs, " ")
 
 		pdfPath := fmt.Sprintf("%s/output.pdf", dir)
-		pdfCmd := fmt.Sprintf("wkhtmltopdf %s %s %s %s %s", wkArgs, headerArgs, footerArgs, bodyFileArgsStr, pdfPath)
+		pdfCmd := fmt.Sprintf("wkhtmltopdf %s %s %s %s %s %s", wkAdditionalArgs, wkArgs, headerArgs, footerArgs, bodyFileArgsStr, pdfPath)
 		log.Println(fmt.Sprintf("Running command: %s", pdfCmd))
 		out, err := exec.Command("sh", "-c", pdfCmd).CombinedOutput()
 		if err != nil {
@@ -137,5 +141,6 @@ func main() {
 
 		return c.Stream(http.StatusOK, "application/pdf", pdfFile)
 	})
+
 	e.Logger.Fatal(e.Start(":2777"))
 }
