@@ -1,11 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"mime/multipart"
+	"net/http"
+	"net/url"
 	"os"
-	"os/exec"
-	"strconv"
 	"path"
+	"path/filepath"
 )
 
 func main() {
@@ -13,65 +17,137 @@ func main() {
 	var bodyPaths []string
 	mwkhtmltopdfURL := getEnvOrDefault("MWKHTMLTOPDF_URL", "http://localhost:2777")
 	wkArgs := ""
-	debug := getEnvOrDefault("MWKHTMLTOPDF_DEBUG", "false")
 
-	if os.Args[1] == "--version" {
+	if len(os.Args) == 2 && os.Args[1] == "--version" {
 		fmt.Println("wkhtmltopdf 0.12.6.1 (with patched qt)")
-		os.Exit(0)
+		return
 	}
 
-	pdfPath = os.Args[len(os.Args) - 1]
+	if len(os.Args) < 3 {
+		fmt.Println("Not enough arguments")
+		return
+	}
+
+	pdfPath = os.Args[len(os.Args)-1]
 	i := len(os.Args) - 2
 
 	for path.Base(os.Args[i])[:11] == "report.body" {
-		bodyPaths = append([]string{os.Args[i]}, bodyPaths...)
+		bodyPaths = append(bodyPaths, os.Args[i])
 		i--
 	}
 
 	for i >= 1 {
-		if os.Args[i] == "--header-html" {
+		arg := os.Args[i]
+		if arg == "--header-html" {
 			headerPath = os.Args[i+1]
 			i--
 			continue
 		}
-		
-		if os.Args[i] == "--footer-html" {
+
+		if arg == "--footer-html" {
 			footerPath = os.Args[i+1]
 			i--
 			continue
 		}
 
-		if len(os.Args[i]) >= 5 && os.Args[i][len(os.Args[i])-5:] == ".html" {
+		if len(arg) >= 5 && arg[len(arg)-5:] == ".html" {
 			i--
 			continue
 		}
 
-		wkArgs = os.Args[i] + " " + wkArgs
+		wkArgs = arg + " " + wkArgs
 		i--
 	}
 
-	curlCmd := fmt.Sprintf("curl -X POST %s/generate -H 'Content-Type: multipart/form-data' -F 'args=%s'", mwkhtmltopdfURL, wkArgs)
+	hc := &http.Client{}
+	form := url.Values{}
+	form.Add("args", wkArgs)
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	defer writer.Close()
+
 	if headerPath != "" {
-		curlCmd += fmt.Sprintf(" -F 'header_html=@%s'", headerPath)
+		headerFile, err := os.Open(headerPath)
+		if err != nil {
+			fmt.Println("Failed to open header file:", err)
+			return
+		}
+		defer headerFile.Close()
+		part, err := writer.CreateFormFile("header_html", filepath.Base(headerFile.Name()))
+		if err != nil {
+			fmt.Println("Failed to create header part:", err)
+			return
+		}
+		if _, err := io.Copy(part, headerFile); err != nil {
+			fmt.Println("Failed to copy header file:", err)
+			return
+		}
 	}
+
 	if footerPath != "" {
-		curlCmd += fmt.Sprintf(" -F 'footer_html=@%s'", footerPath)
+		footerFile, err := os.Open(footerPath)
+		if err != nil {
+			fmt.Println("Failed to open footer file:", err)
+			return
+		}
+		defer footerFile.Close()
+		part, err := writer.CreateFormFile("footer_html", filepath.Base(footerFile.Name()))
+		if err != nil {
+			fmt.Println("Failed to create footer part:", err)
+			return
+		}
+		if _, err := io.Copy(part, footerFile); err != nil {
+			fmt.Println("Failed to copy footer file:", err)
+			return
+		}
 	}
 
 	for i, bodyPath := range bodyPaths {
-		curlCmd += fmt.Sprintf(" -F 'body_html_%s=@%s'", strconv.Itoa(i), bodyPath)
+		bodyFile, err := os.Open(bodyPath)
+		if err != nil {
+			fmt.Println("Failed to open body file:", err)
+			return
+		}
+		defer bodyFile.Close()
+		part, err := writer.CreateFormFile(fmt.Sprintf("body_html_%d", i), filepath.Base(bodyFile.Name()))
+		if err != nil {
+			fmt.Println("Failed to create body part:", err)
+			return
+		}
+		if _, err := io.Copy(part, bodyFile); err != nil {
+			fmt.Println("Failed to copy body file:", err)
+			return
+		}
 	}
 
-	curlCmd += fmt.Sprintf(" -o %s", pdfPath)
-	curlExec := exec.Command("sh", "-c", curlCmd)
-
-	if debug == "true" {
-		fmt.Fprintln(os.Stderr, curlCmd)
-	}
-	
-	err := curlExec.Run()
+	req, err := http.NewRequest("POST", mwkhtmltopdfURL+"/generate", bytes.NewReader(body.Bytes()))
 	if err != nil {
-		panic(err)
+		fmt.Println("Failed to create request:", err)
+		return
+	}
+	req.Header.Add("Content-Type", writer.FormDataContentType())
+
+	resp, err := hc.Do(req)
+	if err != nil {
+		fmt.Println("Failed to send request:", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("Failed to generate PDF:", resp.Status)
+		return
+	}
+
+	out, err := os.Create(pdfPath)
+	if err != nil {
+		fmt.Println("Failed to create output file:", err)
+		return
+	}
+	defer out.Close()
+	if _, err := io.Copy(out, resp.Body); err != nil {
+		fmt.Println("Failed to write output file:", err)
+		return
 	}
 }
 
